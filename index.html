@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Alertas — Histórico</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root{
+    --bg: #0e1420;
+    --panel: #141c2b;
+    --panel-2: #182337;
+    --line: #263349;
+    --text: #e7ecf5;
+    --muted: #8494ad;
+    --amber: #f0a839;
+    --cyan: #43c6d8;
+    --rose: #e0607a;
+    --violet: #8b7ee8;
+    --green: #5fbf8f;
+    --grid: #1e293d;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse 900px 500px at 10% -10%, rgba(240,168,57,0.07), transparent),
+      radial-gradient(ellipse 700px 500px at 100% 0%, rgba(67,198,216,0.06), transparent),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    padding:28px 32px 60px;
+  }
+
+  .top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    border-bottom:1px solid var(--line);
+    padding-bottom:18px;
+    margin-bottom:24px;
+    flex-wrap:wrap;
+    gap:14px;
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:.18em;
+    color:var(--amber);
+    text-transform:uppercase;
+    margin-bottom:6px;
+  }
+  h1{
+    margin:0;
+    font-size:26px;
+    font-weight:800;
+    letter-spacing:-0.02em;
+  }
+  .range{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    color:var(--muted);
+    text-align:right;
+  }
+  .range b{ color:var(--text); font-weight:600; }
+  .dot{ display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--green); margin-right:6px; box-shadow:0 0 8px var(--green); }
+
+  .kpis{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:14px;
+    margin-bottom:22px;
+  }
+  .kpi{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:16px 18px;
+    position:relative;
+    overflow:hidden;
+  }
+  .kpi::before{
+    content:"";
+    position:absolute; top:0; left:0; width:3px; height:100%;
+    background:var(--accent,var(--amber));
+  }
+  .kpi .label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:8px;
+  }
+  .kpi .value{ font-size:30px; font-weight:800; letter-spacing:-0.02em; }
+  .kpi .sub{ font-size:12px; color:var(--muted); margin-top:4px; }
+
+  .grid{
+    display:grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap:16px;
+    margin-bottom:16px;
+  }
+  .grid2{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:16px;
+    margin-bottom:16px;
+  }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:18px 20px 14px;
+  }
+  .panel h2{
+    margin:0 0 3px;
+    font-size:14px;
+    font-weight:700;
+  }
+  .panel .desc{
+    font-size:12px;
+    color:var(--muted);
+    margin-bottom:14px;
+  }
+  .chart-wrap{ position:relative; height:260px; }
+  .chart-wrap.tall{ height:340px; }
+
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  thead th{
+    text-align:left;
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--muted);
+    border-bottom:1px solid var(--line);
+    padding:6px 8px;
+  }
+  tbody td{
+    padding:7px 8px;
+    border-bottom:1px solid #1b2536;
+  }
+  tbody tr:hover{ background:var(--panel-2); }
+  .bar-cell{ display:flex; align-items:center; gap:8px; }
+  .bar-track{ flex:1; height:6px; background:var(--grid); border-radius:3px; overflow:hidden; }
+  .bar-fill{ height:100%; background:linear-gradient(90deg,var(--amber),var(--rose)); border-radius:3px; }
+  .num{ font-family:'JetBrains Mono',monospace; font-weight:600; text-align:right; width:36px; }
+
+  .foot{
+    margin-top:6px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;
+    color:var(--muted);
+    text-align:center;
+    letter-spacing:.05em;
+  }
+
+  @media(max-width:900px){
+    .kpis{ grid-template-columns:repeat(2,1fr); }
+    .grid, .grid2{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div>
+    <div class="eyebrow">Panel de control · Calidad y cumplimiento</div>
+    <h1>Histórico de alertas</h1>
+  </div>
+  <div class="range">
+    <span class="dot"></span><b>1.901</b> alertas registradas<br>
+    del <b>02 ene</b> al <b>17 jul 2026</b> · canal WhatsApp
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi" style="--accent:var(--amber)">
+    <div class="label">Total de alertas</div>
+    <div class="value" id="kpi-total">—</div>
+    <div class="sub">en 7 meses</div>
+  </div>
+  <div class="kpi" style="--accent:var(--cyan)">
+    <div class="label">Tipo más frecuente</div>
+    <div class="value">Llamada ext.</div>
+    <div class="sub" id="kpi-top-desvio-sub">—</div>
+  </div>
+  <div class="kpi" style="--accent:var(--violet)">
+    <div class="label">Asesores alertados</div>
+    <div class="value" id="kpi-asesores">—</div>
+    <div class="sub">personas distintas</div>
+  </div>
+  <div class="kpi" style="--accent:var(--rose)">
+    <div class="label">Promedio mensual</div>
+    <div class="value" id="kpi-promedio">—</div>
+    <div class="sub">alertas / mes</div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <h2>Evolución mensual</h2>
+    <div class="desc">Cantidad de alertas por mes (jul. parcial — datos hasta el 17)</div>
+    <div class="chart-wrap"><canvas id="chartMonth"></canvas></div>
+  </div>
+  <div class="panel">
+    <h2>Tipos de desvío</h2>
+    <div class="desc">Distribución del total de alertas</div>
+    <div class="chart-wrap"><canvas id="chartDesvio"></canvas></div>
+  </div>
+</div>
+
+<div class="grid2">
+  <div class="panel">
+    <h2>Composición mensual por tipo</h2>
+    <div class="desc">Los 6 desvíos más frecuentes, mes a mes</div>
+    <div class="chart-wrap tall"><canvas id="chartStack"></canvas></div>
+  </div>
+  <div class="panel">
+    <h2>Alertas por supervisor</h2>
+    <div class="desc">A cargo de los equipos alertados</div>
+    <div class="chart-wrap tall"><canvas id="chartSup"></canvas></div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Top 15 asesores con más alertas</h2>
+  <div class="desc">Ranking acumulado del período completo</div>
+  <table>
+    <thead><tr><th>#</th><th>Asesor</th><th>Alertas</th><th style="width:40%">Proporción</th></tr></thead>
+    <tbody id="tblAsesores"></tbody>
+  </table>
+</div>
+
+<div class="foot">Generado a partir de Alertas_historico.xlsx · Hoja1</div>
+
+<script>
+const DATA = {"total": 1901, "fecha_min": "2026-01-02", "fecha_max": "2026-07-17", "n_asesores": 81, "n_supervisores": 11, "by_month": {"2026-01": 391, "2026-02": 280, "2026-03": 285, "2026-04": 348, "2026-05": 259, "2026-06": 213, "2026-07": 125}, "by_desvio": {"Llamada extensa": 886, "Chat extenso": 366, "Pausas Largas": 172, "ACW extenso": 110, "Exceso de ba\u00f1o": 109, "Confusi\u00f3n de Aux": 94, "Break fuera de hora": 57, "Demora en Logueo": 50, "Exceso de coach": 22, "Exceso de Break": 19, "CRB extenso": 16}, "by_sup": {"Unamuno Moyano, Noemi Roxana": 693, "Gerbaldo, Agustin": 389, "Alonso Cuffini, Sofia Carolina": 359, "Sin asignar": 297, "Martinez, Lucia Alejandra": 156, "Villegas, Orlando Alberto": 2, "Cuello, Franco": 1, "Colombo, Gustavo Andres": 1, "Gomez, Francisco Andres": 1, "Cuello, Candela del Milagro": 1, "Cufre, Maria Alejandra": 1}, "by_asesor": {"Negretti, Yanina Andrea": 111, "Garc\u00eda, Romina Elizabeth": 91, "Carrizo, Ruth Micaela": 89, "Torri, David Agust\u00edn": 83, "Moyano, Pilar": 82, "Ruiz, Josefina Belen": 73, "Paez, Alejandra Stefania": 71, "Miller, Maico Ignacio": 64, "Bazan, Micaela Lourdes": 62, "Hipper, Macarena Bel\u00e9n": 59, "Marchetti, Agostina": 55, "Malla, Gisella Rocio": 52, "Nazar, Cecilia Soledad": 51, "Picerni, Lorena Elizabeth": 51, "Gonz\u00e1lez, Tob\u00edas": 51}, "matrix_months": ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07"], "matrix_desvios": ["Llamada extensa", "Chat extenso", "Pausas Largas", "ACW extenso", "Exceso de ba\u00f1o", "Confusi\u00f3n de Aux"], "matrix_data": [[150, 98, 55, 0, 38, 17], [117, 60, 34, 0, 21, 17], [116, 84, 30, 0, 8, 17], [198, 69, 15, 5, 15, 13], [131, 23, 12, 50, 13, 19], [121, 21, 15, 26, 9, 7], [53, 11, 11, 29, 5, 4]]};
+
+const palette = ['#f0a839','#43c6d8','#e0607a','#8b7ee8','#5fbf8f','#e0b04a','#6aa6e0','#c47ee8'];
+Chart.defaults.color = '#8494ad';
+Chart.defaults.font.family = "'Inter',sans-serif";
+Chart.defaults.borderColor = '#1e293d';
+
+// KPIs
+document.getElementById('kpi-total').textContent = DATA.total.toLocaleString('es-AR');
+document.getElementById('kpi-asesores').textContent = DATA.n_asesores;
+const monthVals = Object.values(DATA.by_month);
+const avg = Math.round(monthVals.reduce((a,b)=>a+b,0)/monthVals.length);
+document.getElementById('kpi-promedio').textContent = avg.toLocaleString('es-AR');
+const topDesvio = Object.entries(DATA.by_desvio).sort((a,b)=>b[1]-a[1])[0];
+document.getElementById('kpi-top-desvio-sub').textContent = topDesvio[1] + ' alertas · ' + Math.round(topDesvio[1]/DATA.total*100) + '% del total';
+
+// Month evolution (line)
+new Chart(document.getElementById('chartMonth'), {
+  type:'line',
+  data:{
+    labels:Object.keys(DATA.by_month).map(m=>{
+      const [y,mo]=m.split('-');
+      return ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][parseInt(mo)-1];
+    }),
+    datasets:[{
+      data:Object.values(DATA.by_month),
+      borderColor:'#f0a839',
+      backgroundColor:'rgba(240,168,57,0.12)',
+      pointBackgroundColor:'#f0a839',
+      pointRadius:4,
+      pointHoverRadius:6,
+      borderWidth:2.5,
+      fill:true,
+      tension:.35
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{
+      y:{beginAtZero:true, grid:{color:'#1e293d'}},
+      x:{grid:{display:false}}
+    }
+  }
+});
+
+// Desvio doughnut
+new Chart(document.getElementById('chartDesvio'), {
+  type:'doughnut',
+  data:{
+    labels:Object.keys(DATA.by_desvio),
+    datasets:[{
+      data:Object.values(DATA.by_desvio),
+      backgroundColor:palette,
+      borderColor:'#141c2b',
+      borderWidth:2
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    cutout:'62%',
+    plugins:{
+      legend:{
+        position:'right',
+        labels:{boxWidth:10, boxHeight:10, font:{size:10.5}, padding:8}
+      }
+    }
+  }
+});
+
+// Stacked bar: month x tipo
+const monthLabels = DATA.matrix_months.map(m=>{
+  const [y,mo]=m.split('-');
+  return ['ene','feb','mar','abr','may','jun','jul'][parseInt(mo)-1];
+});
+new Chart(document.getElementById('chartStack'), {
+  type:'bar',
+  data:{
+    labels:monthLabels,
+    datasets: DATA.matrix_desvios.map((d,i)=>({
+      label:d,
+      data:DATA.matrix_data.map(row=>row[i]),
+      backgroundColor:palette[i],
+      borderRadius:3,
+      maxBarThickness:34
+    }))
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom', labels:{boxWidth:10, boxHeight:10, font:{size:10}, padding:10}}},
+    scales:{
+      x:{stacked:true, grid:{display:false}},
+      y:{stacked:true, grid:{color:'#1e293d'}}
+    }
+  }
+});
+
+// Supervisor horizontal bar (filter tiny ones out visually but keep top)
+const supEntries = Object.entries(DATA.by_sup).sort((a,b)=>b[1]-a[1]).slice(0,6);
+new Chart(document.getElementById('chartSup'), {
+  type:'bar',
+  data:{
+    labels:supEntries.map(e=>e[0]),
+    datasets:[{
+      data:supEntries.map(e=>e[1]),
+      backgroundColor:'#43c6d8',
+      borderRadius:4,
+      maxBarThickness:26
+    }]
+  },
+  options:{
+    indexAxis:'y',
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{grid:{color:'#1e293d'}},
+      y:{grid:{display:false}, ticks:{font:{size:10.5}}}
+    }
+  }
+});
+
+// Table asesores
+const tbl = document.getElementById('tblAsesores');
+const asesorEntries = Object.entries(DATA.by_asesor);
+const maxVal = asesorEntries[0][1];
+asesorEntries.forEach(([name,count],i)=>{
+  const pct = Math.round(count/maxVal*100);
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td>${i+1}</td><td>${name}</td><td class="num">${count}</td>
+    <td><div class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div></div></td>`;
+  tbl.appendChild(tr);
+});
+</script>
+</body>
+</html>
